@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>عجلة الحظ مع تسجيل النتائج</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #f8f9fa, #e0e0e0);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+    }
+
+    h2 { margin-top: 20px; font-size: 24px; color: #333; }
+
+    .wheel-container {
+      position: relative;
+      width: 90vw;
+      height: 90vw;
+      max-width: 400px;
+      max-height: 400px;
+      margin-top: 20px;
+    }
+
+    .wheel {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 6px solid #333;
+      transition: transform 4s cubic-bezier(0.33, 1, 0.68, 1);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .wheel img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+    }
+
+    #spinBtn {
+      margin-top: 25px;
+      padding: 15px 30px;
+      font-size: 20px;
+      cursor: pointer;
+      background: linear-gradient(90deg, #ff7f50, #ff6347);
+      color: white;
+      border: none;
+      border-radius: 10px;
+    }
+
+    #spinBtn:disabled { background: #aaa; cursor: not-allowed; }
+
+    #result { margin-top: 25px; font-size: 20px; font-weight: bold; }
+
+    .indicator {
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 32px;
+    }
+  </style>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <script>
+    // إعداد Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyA8s1UtUMxUsEUgXipraHKt2TEaVZZ7eRY",
+      authDomain: "wheeloffortune-a1407.firebaseapp.com",
+      projectId: "wheeloffortune-a1407",
+      storageBucket: "wheeloffortune-a1407.firebasestorage.app",
+      messagingSenderId: "250152220914",
+      appId: "1:250152220914:web:c0b007288fe4f97b54786b",
+      measurementId: "G-PJNEV549NV"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+  </script>
+</head>
+<body>
+
+<h2>🎡 عجلة الحظ الكبيرة</h2>
+
+<div class="wheel-container">
+  <div class="wheel" id="wheel">
+    <img src="wheel-design.png" alt="Wheel">
+  </div>
+  <div class="indicator">⬇️</div>
+</div>
+
+<button id="spinBtn">لف العجلة</button>
+<p id="result"></p>
+
+<script>
+  const prizes = [
+    "🎁 خصم 10%",
+    "🎉 خصم 20%",
+    "💰 قسيمة شراء",
+    "😢 لا يوجد جائزة",
+    "🎁 هدية مجانية",
+    "✨ جائزة مفاجأة",
+    "🎯 نقطة مضاعفة",
+    "💎 جائزة قيمة"
+  ];
+
+  const segmentAngle = 360 / prizes.length;
+  const wheel = document.getElementById("wheel");
+
+  // توليد UUID لكل مستخدم
+  let userId = localStorage.getItem("userId");
+  if (!userId) {
+    userId = "user-" + Math.random().toString(36).substr(2, 16);
+    localStorage.setItem("userId", userId);
+  }
+
+  const hasSpun = localStorage.getItem("hasSpun");
+  if (hasSpun) {
+    document.getElementById("spinBtn").disabled = true;
+    document.getElementById("result").innerText =
+      "❌ لقد قمتِ باللف مسبقًا\nجائزتك: " + hasSpun;
+  }
+
+  document.getElementById("spinBtn").onclick = function () {
+    if (localStorage.getItem("hasSpun")) return;
+
+    const prizeIndex = Math.floor(Math.random() * prizes.length);
+    const rotation = 360 * 5 + prizeIndex * segmentAngle + segmentAngle / 2;
+    wheel.style.transform = `rotate(${rotation}deg)`;
+
+    setTimeout(() => {
+      const prize = prizes[prizeIndex];
+      document.getElementById("result").innerText =
+        "🎉 مبروك! جائزتك: " + prize;
+
+      // تسجيل النتيجة في Firebase مع معرف المستخدم
+      db.collection("wheelResults").add({
+        userId: userId,
+        prize: prize,
+        timestamp: new Date().toISOString()
+      })
+      .then(() => console.log("تم تسجيل النتيجة"))
+      .catch((error) => console.error("خطأ في تسجيل النتيجة: ", error));
+
+      localStorage.setItem("hasSpun", prize);
+      document.getElementById("spinBtn").disabled = true;
+    }, 4000);
+  };
+</script>
+
+</body>
+</html>
